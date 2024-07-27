@@ -8,12 +8,18 @@ let mainWindow;
 let otpEntries = [];
 let masterPassword;
 
-if ( process.env.NODE_ENV != 'production') { 
-    require('electron-reload')(__dirname, { 
-        electron: path.join(__dirname, '..','node_modules', '.bin', 'electron'), 
-        hardResetMethod: 'exit'
-    }); 
-} 
+const rootFolder = path.join(__dirname, "..");
+
+if (process.env.NODE_ENV != "production") {
+  try {
+    require("electron-reload")(rootFolder, {
+      electron: path.join(rootFolder, "node_modules", ".bin", "electron"),
+      hardResetMethod: "exit",
+    });
+  } catch (error) {
+    console.log(error);
+  }
+}
 
 const filePath = path.join(app.getPath("userData"), "otpEntries.json");
 
@@ -26,10 +32,10 @@ function createWindow() {
       nodeIntegration: true,
       contextIsolation: false,
     },
-    icon: path.join(__dirname, "assets", "icon.png"),
+    icon: path.join(rootFolder, "assets", "icon.png"),
   });
 
-  mainWindow.loadFile("views/index.html");
+  mainWindow.loadFile("view/index.html");
 
   mainWindow.webContents.on("did-finish-load", () => {
     requestMasterPassword();
@@ -37,61 +43,67 @@ function createWindow() {
 }
 
 function createPasswordPrompt() {
-    let passwordPrompt = new BrowserWindow({
-      width: 350,
-      height: 320,
-      modal: true,
-      parent: mainWindow,
-      title: "Master Password",
-      webPreferences: {
-        nodeIntegration: true,
-        contextIsolation: false,
-      },
-    });
-  
-    passwordPrompt.loadFile("views/passwordPrompt.html");
-  
-    return new Promise((resolve, reject) => {
-      const handlePasswordSubmit = (event, password) => {
-        if (password) {
-          resolve(password);
-          passwordPrompt.removeListener('close', handleWindowClose);
-          passwordPrompt.close();
-        } else {
-          // If password is not provided, reject the promise and reopen the dialog
-          passwordPrompt.removeListener('close', handleWindowClose);
-          reject(new Error('Password not provided'));
-        }
-      };
-  
-      const handleWindowClose = () => {
-        // Reopen the prompt if user closes the window without providing password
-        reject(new Error('Password prompt closed without providing password'));
-      };
-  
-      ipcMain.once("submit-password", handlePasswordSubmit);
-      passwordPrompt.on('close', handleWindowClose);
-    });
-  }
+  let passwordPrompt = new BrowserWindow({
+    width: 350,
+    height: 320,
+    modal: true,
+    parent: mainWindow,
+    title: "Master Password",
+    webPreferences: {
+      nodeIntegration: true,
+      contextIsolation: false,
+    },
+  });
 
-  async function requestMasterPassword() {
-    while (true) {
-      try {
-        masterPassword = await createPasswordPrompt();
-        try {
-          loadOtpEntries(); // This function should use the decrypted data
-          break; // Exit loop if password is successfully used
-        } catch (error) {
-          // Handle decryption failure
-          console.error('Error loading OTP entries:', error.message);
-          dialog.showErrorBox('Decryption Error', 'The master password is incorrect or the data is corrupted. Please try again.');
-        }
-      } catch (error) {
-        console.error('Error obtaining master password:', error.message);
-        dialog.showErrorBox('Error', 'Master password is required to proceed. Please try again.');
+  passwordPrompt.loadFile("view/passwordPrompt.html");
+
+  return new Promise((resolve, reject) => {
+    const handlePasswordSubmit = (event, password) => {
+      if (password) {
+        resolve(password);
+        passwordPrompt.removeListener("close", handleWindowClose);
+        passwordPrompt.close();
+      } else {
+        // If password is not provided, reject the promise and reopen the dialog
+        passwordPrompt.removeListener("close", handleWindowClose);
+        reject(new Error("Password not provided"));
       }
+    };
+
+    const handleWindowClose = () => {
+      // Reopen the prompt if user closes the window without providing password
+      reject(new Error("Password prompt closed without providing password"));
+    };
+
+    ipcMain.once("submit-password", handlePasswordSubmit);
+    passwordPrompt.on("close", handleWindowClose);
+  });
+}
+
+async function requestMasterPassword() {
+  while (true) {
+    try {
+      masterPassword = await createPasswordPrompt();
+      try {
+        loadOtpEntries(); // This function should use the decrypted data
+        break; // Exit loop if password is successfully used
+      } catch (error) {
+        // Handle decryption failure
+        console.error("Error loading OTP entries:", error.message);
+        dialog.showErrorBox(
+          "Decryption Error",
+          "The master password is incorrect or the data is corrupted. Please try again."
+        );
+      }
+    } catch (error) {
+      console.error("Error obtaining master password:", error.message);
+      dialog.showErrorBox(
+        "Error",
+        "Master password is required to proceed. Please try again."
+      );
     }
   }
+}
 
 function loadOtpEntries() {
   if (fs.existsSync(filePath)) {
@@ -127,7 +139,6 @@ ipcMain.on("app-quit", (event, entry) => {
     app.quit();
   }
 });
-
 
 ipcMain.on("add-otp-entry", (event, entry) => {
   otpEntries.push(entry);

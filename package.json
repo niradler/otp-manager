@@ -6,14 +6,40 @@
   "scripts": {
     "start": "electron .",
     "dev": "electron .",
-    "pack": "electron-builder --dir",
-    "dist": "electron-builder",
+    "pack": "cross-env NODE_ENV=production electron-builder --dir",
+    "dist": "cross-env NODE_ENV=production electron-builder",
     "package": "cross-env NODE_ENV=production electron-packager --overwrite"
   },
   "build": {
     "appId": "otp.manager",
+    "productName": "OTP Manager",
+    "directories": {
+      "output": "dist"
+    },
+    "files": [
+      "src/**" ,
+      "view/**" ,
+      "assets/**" 
+    ],
+    "win": {
+      "target": [
+        "nsis",
+        "zip"
+      ]
+    },
     "mac": {
-      "category": "otp.manager.utils"
+      "category": "otp.manager.utils",
+      "target": [
+        "dmg",
+        "zip"
+      ]
+    },
+    "linux": {
+      "target": [
+        "AppImage",
+        "deb",
+        "rpm"
+      ]
     }
   },
   "keywords": [],
